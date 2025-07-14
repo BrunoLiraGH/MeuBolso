@@ -2,9 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MeuBolso - Controle Financeiro Pessoal</title>
-  <meta name="description" content="Aplicativo de controle financeiro pessoal com reconhecimento de voz e categorização automática">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MeuBolso - Controle Financeiro</title>
+  <meta name="description" content="Aplicativo de controle financeiro pessoal">
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -15,69 +15,100 @@
       <p class="subtitle">Controle financeiro simplificado</p>
     </div>
     
-    <div class="voice-input-card">
-      <div class="voice-icon-container">
-        <div class="voice-icon" id="voiceButton">
-          <div class="voice-icon-inner">
-            <i class="mic-icon"></i>
+    <div class="browser-warning" id="browserWarning">
+      <p>⚠️ Para usar o reconhecimento de voz, use Chrome ou Safari.</p>
+      <button id="closeWarning">Entendi</button>
+    </div>
+    
+    <div class="permission-notice" id="permissionNotice">
+      <p>📢 Esta aplicação precisa de permissão para usar seu microfone.</p>
+      <button id="requestPermission">Permitir Microfone</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="voice">Voz</button>
+      <button class="tab-btn" data-tab="manual">Manual</button>
+      <button class="tab-btn" data-tab="history">Histórico</button>
+    </div>
+    
+    <div class="tab-content active" id="voiceTab">
+      <div class="voice-input-card">
+        <div class="voice-icon-container">
+          <div class="voice-icon" id="voiceButton">
+            <div class="voice-icon-inner">
+              <i class="mic-icon"></i>
+            </div>
           </div>
+          <p class="voice-status" id="voiceStatus">Toque para falar</p>
         </div>
-        <p class="voice-status" id="voiceStatus">Toque para falar</p>
-      </div>
-      
-      <div class="voice-instructions">
-        <h3>Como usar:</h3>
-        <p>Diga o valor seguido da categoria</p>
-        <p class="example">Exemplos:</p>
-        <ul class="examples-list">
-          <li>"50 reais restaurante"</li>
-          <li>"120 reais para supermercado"</li>
-          <li>"32 e 50 farmácia"</li>
-          <li>"200 para roupas"</li>
-        </ul>
-      </div>
-      
-      <div class="recognition-result" id="recognitionResult">
-        <div class="result-card hidden" id="resultCard">
-          <div class="result-header">Transação reconhecida</div>
-          <div class="result-content">
-            <div class="result-item">
-              <span class="result-label">Valor:</span>
-              <span class="result-value" id="recognizedValue">R$ 0,00</span>
-            </div>
-            <div class="result-item">
-              <span class="result-label">Categoria:</span>
-              <span class="result-value" id="recognizedCategory">-</span>
-            </div>
-            <div class="result-debug">
-              <small id="debugText" class="debug-text"></small>
-            </div>
-          </div>
-          <div class="result-actions">
-            <button class="btn btn-confirm" id="confirmBtn">Confirmar</button>
-            <button class="btn btn-retry" id="retryBtn">Tentar novamente</button>
-          </div>
+        
+        <div class="voice-instructions">
+          <h3>Como usar:</h3>
+          <p>Diga o valor seguido da categoria</p>
+          <p class="example">Exemplos:</p>
+          <ul class="examples-list">
+            <li>"50 reais restaurante"</li>
+            <li>"120 reais supermercado"</li>
+            <li>"32 e 50 farmácia"</li>
+          </ul>
         </div>
       </div>
     </div>
     
-    <div class="voice-tips">
-      <h4>Dicas:</h4>
-      <ul>
-        <li>Fale claramente e em um ambiente silencioso</li>
-        <li>Mencione primeiro o valor e depois a categoria</li>
-        <li>Você pode dizer "reais" ou apenas o número</li>
-        <li>Categorias disponíveis: alimentação, transporte, lazer, supermercado, moradia, saúde</li>
-      </ul>
-      <div class="browser-support-note">
-        <p><strong>Nota:</strong> O reconhecimento de voz funciona melhor nos navegadores Chrome, Edge e Safari.</p>
+    <div class="tab-content" id="manualTab">
+      <div class="manual-input-card">
+        <h3>Adicionar Transação</h3>
+        <div class="input-group">
+          <label for="transactionAmount">Valor (R$)</label>
+          <input type="number" id="transactionAmount" placeholder="0,00" step="0.01">
+        </div>
+        <div class="input-group">
+          <label for="transactionCategory">Categoria</label>
+          <select id="transactionCategory">
+            <option value="🍽️ Alimentação">🍽️ Alimentação</option>
+            <option value="⛽ Transporte">⛽ Transporte</option>
+            <option value="🎬 Lazer">🎬 Lazer</option>
+            <option value="🛒 Supermercado">🛒 Supermercado</option>
+            <option value="🏠 Moradia">🏠 Moradia</option>
+            <option value="💊 Saúde">💊 Saúde</option>
+            <option value="👕 Vestuário">👕 Vestuário</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="transactionDesc">Descrição (opcional)</label>
+          <input type="text" id="transactionDesc" placeholder="Ex: Almoço">
+        </div>
+        <button class="btn btn-confirm" id="addManualTransaction">Adicionar</button>
       </div>
     </div>
     
-    <div class="transactions-section">
-      <h3>Transações Recentes</h3>
-      <div id="transactionsList" class="transactions-list">
-        <p class="empty-state">Suas transações aparecerão aqui</p>
+    <div class="tab-content" id="historyTab">
+      <div class="transactions-section">
+        <h3>Transações Recentes</h3>
+        <div id="transactionsList" class="transactions-list">
+          <p class="empty-state">Suas transações aparecerão aqui</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="recognition-result" id="recognitionResult">
+      <div class="result-card hidden" id="resultCard">
+        <div class="result-header">Transação reconhecida</div>
+        <div class="result-content">
+          <div class="result-item">
+            <span class="result-label">Valor:</span>
+            <span class="result-value" id="recognizedValue">R$ 0,00</span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Categoria:</span>
+            <span class="result-value" id="recognizedCategory">-</span>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-confirm" id="confirmBtn">Confirmar</button>
+          <button class="btn btn-retry" id="retryBtn">Tentar novamente</button>
+        </div>
       </div>
     </div>
     
@@ -89,3 +120,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
