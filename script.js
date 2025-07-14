@@ -3,11 +3,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // Elementos DOM
   const voiceButton = document.getElementById('voiceButton');
   const voiceStatus = document.getElementById('voiceStatus');
-  const resultCard = document.getElementById('resultCard');
+  const recognitionModal = document.getElementById('recognitionResult');
   const recognizedValue = document.getElementById('recognizedValue');
   const recognizedCategory = document.getElementById('recognizedCategory');
   const confirmBtn = document.getElementById('confirmBtn');
   const retryBtn = document.getElementById('retryBtn');
+  const debugText = document.getElementById('debugText');
   const transactionsList = document.getElementById('transactionsList');
   const browserWarning = document.getElementById('browserWarning');
   const closeWarning = document.getElementById('closeWarning');
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const transactionAmount = document.getElementById('transactionAmount');
   const transactionCategory = document.getElementById('transactionCategory');
   const transactionDesc = document.getElementById('transactionDesc');
+  const clearTransactions = document.getElementById('clearTransactions');
   
   // Inicializar histórico de transações do localStorage
   let transactions = JSON.parse(localStorage.getItem('meuBolsoTransactions')) || [];
@@ -91,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // Verificar se está em HTTPS (necessário para reconhecimento de voz em produção)
-  const isSecure = window.location.protocol === 'https:';
+  const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   
   // Verificar suporte a reconhecimento de voz
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -103,10 +105,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const isCompatibleBrowser = isChrome || isMobileSafari;
   
   // Mostrar aviso de navegador se necessário
-  if (!isCompatibleBrowser) {
+  if (!isCompatibleBrowser && SpeechRecognition) {
     browserWarning.style.display = 'flex';
-  } else {
-    browserWarning.style.display = 'none';
   }
   
   closeWarning.addEventListener('click', () => {
@@ -115,13 +115,18 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Verificar permissão de microfone
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.permissions.query({ name: 'microphone' }).then(permissionStatus => {
-      if (permissionStatus.state === 'granted') {
-        permissionNotice.style.display = 'none';
-      } else {
-        permissionNotice.style.display = 'flex';
-      }
-    });
+    navigator.permissions.query({ name: 'microphone' })
+      .then(permissionStatus => {
+        if (permissionStatus.state === 'granted') {
+          permissionNotice.style.display = 'none';
+        } else {
+          permissionNotice.style.display = 'flex';
+        }
+      })
+      .catch(error => {
+        // Alguns navegadores não suportam a API de permissões
+        console.log('Não foi possível verificar permissões:', error);
+      });
   }
   
   requestPermission.addEventListener('click', () => {
@@ -137,94 +142,132 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  if (!SpeechRecognition || (!isSecure && !window.location.hostname.includes('localhost'))) {
+  // Verificar suporte a reconhecimento de voz
+  if (!SpeechRecognition || !isSecure) {
     voiceStatus.textContent = "Reconhecimento de voz indisponível";
     voiceButton.classList.add('disabled');
     
     if (!isSecure) {
-      alert("O reconhecimento de voz requer uma conexão segura (HTTPS). Algumas funcionalidades podem não estar disponíveis.");
+      console.log("O reconhecimento de voz requer uma conexão segura (HTTPS).");
     }
+    
+    // Mudar para a aba manual automaticamente
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+    document.querySelector('[data-tab="manual"]').classList.add('active');
+    document.getElementById('manualTab').classList.add('active');
   } else {
-    recognition = new SpeechRecognition();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    let isListening = false;
-    
-    // Iniciar/parar reconhecimento
-    voiceButton.addEventListener('click', () => {
-      if (isListening) {
+    // Configurar reconhecimento de voz
+    try {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      
+      let isListening = false;
+      
+      // Iniciar/parar reconhecimento
+      voiceButton.addEventListener('click', () => {
+        if (isListening) {
+          stopListening();
+        } else {
+          startListening();
+        }
+      });
+      
+      function startListening() {
+        try {
+          recognition.start();
+          voiceButton.classList.add('listening');
+          voiceStatus.textContent = 'Ouvindo...';
+          isListening = true;
+        } catch (error) {
+          console.error('Erro ao iniciar reconhecimento:', error);
+          voiceStatus.textContent = 'Erro ao iniciar. Tente novamente.';
+          alert("Erro ao iniciar o reconhecimento de voz. Tente usar a entrada manual.");
+          
+          // Mudar para a aba manual
+          tabButtons.forEach(btn => btn.classList.remove('active'));
+          tabContents.forEach(content => content.classList.remove('active'));
+          document.querySelector('[data-tab="manual"]').classList.add('active');
+          document.getElementById('manualTab').classList.add('active');
+        }
+      }
+      
+      function stopListening() {
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.error('Erro ao parar reconhecimento:', e);
+        }
+        voiceButton.classList.remove('listening');
+        voiceStatus.textContent = 'Toque para falar';
+        isListening = false;
+      }
+      
+      // Processar resultado
+      recognition.onresult = (event) => {
+        const speechResult = event.results[0][0].transcript.toLowerCase();
+        console.log('Fala reconhecida:', speechResult);
+        
+        // Para fins de debug
+        if (debugText) {
+          debugText.textContent = `Texto reconhecido: "${speechResult}"`;
+        }
+        
+        // Processar o texto reconhecido
+        const processedResult = processVoiceInput(speechResult);
+        
+        // Exibir resultado
+        recognizedValue.textContent = `R$ ${processedResult.formattedAmount}`;
+        recognizedCategory.textContent = processedResult.category;
+        recognitionModal.style.display = 'flex';
+        
+        // Resetar estado
         stopListening();
-      } else {
-        startListening();
-      }
-    });
-    
-    function startListening() {
-      resultCard.classList.add('hidden');
-      try {
-        recognition.start();
-        voiceButton.classList.add('listening');
-        voiceStatus.textContent = 'Ouvindo...';
-        isListening = true;
-      } catch (error) {
-        console.error('Erro ao iniciar reconhecimento:', error);
-        voiceStatus.textContent = 'Erro ao iniciar. Tente novamente.';
-        alert("Erro ao iniciar o reconhecimento de voz: " + error.message);
-      }
+      };
+      
+      // Tratamento de erros
+      recognition.onerror = (event) => {
+        console.error('Erro de reconhecimento:', event.error);
+        voiceButton.classList.remove('listening');
+        voiceStatus.textContent = 'Erro. Tente novamente';
+        isListening = false;
+        
+        if (event.error === 'not-allowed') {
+          alert("Permissão de microfone negada. Por favor, permita o acesso ao microfone nas configurações do seu navegador.");
+          permissionNotice.style.display = 'flex';
+        } else {
+          alert("Erro no reconhecimento de voz. Tente usar a entrada manual.");
+          
+          // Mudar para a aba manual
+          tabButtons.forEach(btn => btn.classList.remove('active'));
+          tabContents.forEach(content => content.classList.remove('active'));
+          document.querySelector('[data-tab="manual"]').classList.add('active');
+          document.getElementById('manualTab').classList.add('active');
+        }
+      };
+      
+      // Fim do reconhecimento
+      recognition.onend = () => {
+        if (isListening) {
+          stopListening();
+        }
+      };
+    } catch (error) {
+      console.error('Erro ao configurar reconhecimento de voz:', error);
+      voiceStatus.textContent = "Reconhecimento de voz indisponível";
+      voiceButton.classList.add('disabled');
+      
+      // Mudar para a aba manual automaticamente
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.querySelector('[data-tab="manual"]').classList.add('active');
+      document.getElementById('manualTab').classList.add('active');
     }
-    
-    function stopListening() {
-      try {
-        recognition.stop();
-      } catch (e) {
-        console.error('Erro ao parar reconhecimento:', e);
-      }
-      voiceButton.classList.remove('listening');
-      voiceStatus.textContent = 'Toque para falar';
-      isListening = false;
-    }
-    
-    // Processar resultado
-    recognition.onresult = (event) => {
-      const speechResult = event.results[0][0].transcript.toLowerCase();
-      console.log('Fala reconhecida:', speechResult);
-      
-      // Processar o texto reconhecido
-      const processedResult = processVoiceInput(speechResult);
-      
-      // Exibir resultado
-      recognizedValue.textContent = `R$ ${processedResult.formattedAmount}`;
-      recognizedCategory.textContent = processedResult.category;
-      resultCard.classList.remove('hidden');
-      
-      // Resetar estado
-      stopListening();
-    };
-    
-    // Tratamento de erros
-    recognition.onerror = (event) => {
-      console.error('Erro de reconhecimento:', event.error);
-      voiceButton.classList.remove('listening');
-      voiceStatus.textContent = 'Erro. Tente novamente';
-      isListening = false;
-      
-      if (event.error === 'not-allowed') {
-        alert("Permissão de microfone negada. Por favor, permita o acesso ao microfone nas configurações do seu navegador.");
-        permissionNotice.style.display = 'flex';
-      }
-    };
-    
-    // Fim do reconhecimento
-    recognition.onend = () => {
-      if (isListening) {
-        stopListening();
-      }
-    };
   }
   
-  // Botões de confirmação e nova tentativa
+  // Botões de confirmação e nova tentativa no modal
   confirmBtn.addEventListener('click', () => {
     const value = recognizedValue.textContent.replace('R$ ', '');
     const category = recognizedCategory.textContent;
@@ -232,20 +275,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // Criar nova transação
     addTransaction(parseFloat(value.replace(',', '.')), category);
     
-    // Feedback
-    resultCard.classList.add('hidden');
+    // Fechar modal
+    recognitionModal.style.display = 'none';
   });
   
   retryBtn.addEventListener('click', () => {
-    resultCard.classList.add('hidden');
+    recognitionModal.style.display = 'none';
     if (recognition) {
-      startListening();
+      try {
+        startListening();
+      } catch (error) {
+        console.error('Erro ao reiniciar reconhecimento:', error);
+        alert("Não foi possível reiniciar o reconhecimento de voz. Tente usar a entrada manual.");
+        
+        // Mudar para a aba manual
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        document.querySelector('[data-tab="manual"]').classList.add('active');
+        document.getElementById('manualTab').classList.add('active');
+      }
+    }
+  });
+  
+  // Fechar modal ao clicar fora
+  recognitionModal.addEventListener('click', (event) => {
+    if (event.target === recognitionModal) {
+      recognitionModal.style.display = 'none';
     }
   });
   
   // Adicionar transação manual
   addManualTransaction.addEventListener('click', () => {
-    const amount = parseFloat(transactionAmount.value);
+    const amount = parseFloat(transactionAmount.value.replace(',', '.'));
     const category = transactionCategory.value;
     const description = transactionDesc.value;
     
@@ -263,6 +324,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Feedback
     alert('Transação registrada com sucesso!');
+    
+    // Mudar para a aba de histórico
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+    document.querySelector('[data-tab="history"]').classList.add('active');
+    document.getElementById('historyTab').classList.add('active');
+  });
+  
+  // Limpar histórico de transações
+  clearTransactions.addEventListener('click', () => {
+    if (confirm('Tem certeza que deseja limpar todo o histórico de transações?')) {
+      transactions = [];
+      localStorage.setItem('meuBolsoTransactions', JSON.stringify(transactions));
+      updateTransactionsList();
+      alert('Histórico limpo com sucesso!');
+    }
   });
   
   // Função para adicionar transação
@@ -279,9 +356,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adicionar ao histórico
     transactions.unshift(newTransaction);
     
-    // Limitar a 10 transações para simplificar
-    if (transactions.length > 10) {
-      transactions = transactions.slice(0, 10);
+    // Limitar a 20 transações para simplificar
+    if (transactions.length > 20) {
+      transactions = transactions.slice(0, 20);
     }
     
     // Salvar no localStorage
@@ -289,12 +366,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Atualizar a interface
     updateTransactionsList();
-    
-    // Mudar para a aba de histórico
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    tabContents.forEach(content => content.classList.remove('active'));
-    document.querySelector('[data-tab="history"]').classList.add('active');
-    document.getElementById('historyTab').classList.add('active');
   }
   
   // Função para processar texto de entrada por voz
