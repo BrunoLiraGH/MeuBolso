@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const voiceBtn = document.getElementById('voiceBtn');
   const manualBtn = document.getElementById('manualBtn');
   const historyBtn = document.getElementById('historyBtn');
+  const recentTransactions = document.getElementById('recentTransactions');
+  const frequentTransactions = document.getElementById('frequentTransactions');
   
   // Elementos DOM - Reconhecimento de Voz
   const voiceButton = document.getElementById('voiceButton');
@@ -125,41 +127,44 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Botões de ação rápida no dashboard
+  // CORREÇÃO 1: Botões de ação rápida no dashboard
   if (scanBtn) {
-    scanBtn.addEventListener('click', () => {
+    scanBtn.addEventListener('click', function() {
       openScanScreen();
     });
   }
   
   if (voiceBtn) {
-    voiceBtn.addEventListener('click', () => {
+    voiceBtn.addEventListener('click', function() {
       // Mudar para a aba de voz
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
-      document.querySelector('[data-tab="voice"]').classList.add('active');
-      document.getElementById('voiceTab').classList.add('active');
+      switchToTab('voice');
     });
   }
   
   if (manualBtn) {
-    manualBtn.addEventListener('click', () => {
+    manualBtn.addEventListener('click', function() {
       // Mudar para a aba manual
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
-      document.querySelector('[data-tab="manual"]').classList.add('active');
-      document.getElementById('manualTab').classList.add('active');
+      switchToTab('manual');
     });
   }
   
   if (historyBtn) {
-    historyBtn.addEventListener('click', () => {
+    historyBtn.addEventListener('click', function() {
       // Mudar para a aba de histórico
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
-      document.querySelector('[data-tab="history"]').classList.add('active');
-      document.getElementById('historyTab').classList.add('active');
+      switchToTab('history');
     });
+  }
+  
+  // Função auxiliar para trocar de aba
+  function switchToTab(tabName) {
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+    
+    const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+    if (tabBtn) tabBtn.classList.add('active');
+    
+    const tabContent = document.getElementById(`${tabName}Tab`);
+    if (tabContent) tabContent.classList.add('active');
   }
   
   // Verificar se está em HTTPS (necessário para reconhecimento de voz em produção)
@@ -179,9 +184,11 @@ document.addEventListener('DOMContentLoaded', function() {
     browserWarning.style.display = 'flex';
   }
   
-  closeWarning.addEventListener('click', () => {
-    browserWarning.style.display = 'none';
-  });
+  if (closeWarning) {
+    closeWarning.addEventListener('click', () => {
+      browserWarning.style.display = 'none';
+    });
+  }
   
   // Verificar permissão de microfone
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -199,18 +206,20 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
   
-  requestPermission.addEventListener('click', () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
-          permissionNotice.style.display = 'none';
-          alert('Permissão concedida! Você pode usar o reconhecimento de voz agora.');
-        })
-        .catch(err => {
-          alert('Não foi possível obter permissão para o microfone: ' + err.message);
-        });
-    }
-  });
+  if (requestPermission) {
+    requestPermission.addEventListener('click', () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(() => {
+            permissionNotice.style.display = 'none';
+            alert('Permissão concedida! Você pode usar o reconhecimento de voz agora.');
+          })
+          .catch(err => {
+            alert('Não foi possível obter permissão para o microfone: ' + err.message);
+          });
+      }
+    });
+  }
   
   // Configurar reconhecimento de voz
   if (!SpeechRecognition || !isSecure) {
@@ -257,10 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
           alert("Erro ao iniciar o reconhecimento de voz. Tente usar a entrada manual.");
           
           // Mudar para a aba manual
-          tabButtons.forEach(btn => btn.classList.remove('active'));
-          tabContents.forEach(content => content.classList.remove('active'));
-          document.querySelector('[data-tab="manual"]').classList.add('active');
-          document.getElementById('manualTab').classList.add('active');
+          switchToTab('manual');
         }
       }
       
@@ -315,10 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
           alert("Erro no reconhecimento de voz. Tente usar a entrada manual.");
           
           // Mudar para a aba manual
-          tabButtons.forEach(btn => btn.classList.remove('active'));
-          tabContents.forEach(content => content.classList.remove('active'));
-          document.querySelector('[data-tab="manual"]').classList.add('active');
-          document.getElementById('manualTab').classList.add('active');
+          switchToTab('manual');
         }
       };
       
@@ -340,95 +343,107 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Botões de confirmação e nova tentativa no modal
-  confirmBtn.addEventListener('click', () => {
-    const value = recognizedValue.textContent.replace('R$ ', '');
-    const category = recognizedCategory.textContent;
-    
-    // Criar nova transação (valor negativo para despesas)
-    addTransaction(parseFloat('-' + value.replace(',', '.')), category);
-    
-    // Fechar modal
-    recognitionModal.style.display = 'none';
-  });
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      const value = recognizedValue.textContent.replace('R$ ', '');
+      const category = recognizedCategory.textContent;
+      
+      // CORREÇÃO: Criar nova transação (valor negativo para despesas)
+      addTransaction(-parseFloat(value.replace(',', '.')), category);
+      
+      // Fechar modal
+      recognitionModal.style.display = 'none';
+    });
+  }
   
-  retryBtn.addEventListener('click', () => {
-    recognitionModal.style.display = 'none';
-    if (recognition) {
-      try {
-        startListening();
-      } catch (error) {
-        console.error('Erro ao reiniciar reconhecimento:', error);
-        alert("Não foi possível reiniciar o reconhecimento de voz. Tente usar a entrada manual.");
-        
-        // Mudar para a aba manual
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabContents.forEach(content => content.classList.remove('active'));
-        document.querySelector('[data-tab="manual"]').classList.add('active');
-        document.getElementById('manualTab').classList.add('active');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      recognitionModal.style.display = 'none';
+      if (recognition) {
+        try {
+          startListening();
+        } catch (error) {
+          console.error('Erro ao reiniciar reconhecimento:', error);
+          alert("Não foi possível reiniciar o reconhecimento de voz. Tente usar a entrada manual.");
+          
+          // Mudar para a aba manual
+          switchToTab('manual');
+        }
       }
-    }
-  });
+    });
+  }
   
   // Fechar modal ao clicar fora
-  recognitionModal.addEventListener('click', (event) => {
-    if (event.target === recognitionModal) {
-      recognitionModal.style.display = 'none';
-    }
-  });
+  if (recognitionModal) {
+    recognitionModal.addEventListener('click', (event) => {
+      if (event.target === recognitionModal) {
+        recognitionModal.style.display = 'none';
+      }
+    });
+  }
   
   // Adicionar transação manual
-  addManualTransaction.addEventListener('click', () => {
-    let amount = parseFloat(transactionAmount.value.replace(',', '.'));
-    const category = transactionCategory.value;
-    const description = transactionDesc.value;
-    const type = transactionType.value;
-    
-    if (isNaN(amount) || amount === 0) {
-      alert("Por favor, insira um valor válido.");
-      return;
-    }
-    
-    // Se for despesa, transformar em valor negativo
-    if (type === 'expense') {
-      amount = -Math.abs(amount);
-    } else {
-      amount = Math.abs(amount);
-    }
-    
-    // Adicionar transação
-    addTransaction(amount, category, description);
-    
-    // Limpar campos
-    transactionAmount.value = '';
-    transactionDesc.value = '';
-    
-    // Feedback
-    alert('Transação registrada com sucesso!');
-    
-    // Mudar para a aba de dashboard
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    tabContents.forEach(content => content.classList.remove('active'));
-    document.querySelector('[data-tab="dashboard"]').classList.add('active');
-    document.getElementById('dashboardTab').classList.add('active');
-    
-    // Atualizar dashboard
-    updateDashboard();
-  });
+  if (addManualTransaction) {
+    addManualTransaction.addEventListener('click', () => {
+      let amount = parseFloat(transactionAmount.value.replace(',', '.'));
+      const category = transactionCategory.value;
+      const description = transactionDesc.value;
+      const type = transactionType.value;
+      
+      if (isNaN(amount) || amount === 0) {
+        alert("Por favor, insira um valor válido.");
+        return;
+      }
+      
+      // Se for despesa, transformar em valor negativo
+      if (type === 'expense') {
+        amount = -Math.abs(amount);
+      } else {
+        amount = Math.abs(amount);
+      }
+      
+      // Adicionar transação
+      addTransaction(amount, category, description);
+      
+      // Limpar campos
+      transactionAmount.value = '';
+      transactionDesc.value = '';
+      
+      // Feedback
+      alert('Transação registrada com sucesso!');
+      
+      // Mudar para a aba de dashboard
+      switchToTab('dashboard');
+      
+      // Atualizar dashboard
+      updateDashboard();
+    });
+  }
   
   // Limpar histórico de transações
-  clearTransactions.addEventListener('click', () => {
-    if (confirm('Tem certeza que deseja limpar todo o histórico de transações?')) {
-      transactions = [];
-      localStorage.setItem('meuBolsoTransactions', JSON.stringify(transactions));
-      updateTransactionsList();
-      updateDashboard();
-      alert('Histórico limpo com sucesso!');
-    }
-  });
+  if (clearTransactions) {
+    clearTransactions.addEventListener('click', () => {
+      if (confirm('Tem certeza que deseja limpar todo o histórico de transações?')) {
+        transactions = [];
+        localStorage.setItem('meuBolsoTransactions', JSON.stringify(transactions));
+        updateTransactionsList();
+        updateDashboard();
+        alert('Histórico limpo com sucesso!');
+      }
+    });
+  }
   
-  // Controles da tela de escaneamento
-  if (scanBtn) {
-    scanBtn.addEventListener('click', openScanScreen);
+  // CORREÇÃO: Controles da tela de escaneamento
+  function openScanScreen() {
+    if (scanScreen) {
+      scanScreen.style.display = 'flex';
+    }
+  }
+  
+  function closeScanScreen() {
+    if (scanScreen) {
+      scanScreen.style.display = 'none';
+    }
   }
   
   if (closeScan) {
@@ -450,14 +465,6 @@ document.addEventListener('DOMContentLoaded', function() {
         recognitionModal.style.display = 'flex';
       }, 1000);
     });
-  }
-  
-  function openScanScreen() {
-    scanScreen.style.display = 'flex';
-  }
-  
-  function closeScanScreen() {
-    scanScreen.style.display = 'none';
   }
   
   // Função para adicionar transação
@@ -579,6 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const transactionItem = document.createElement('div');
       transactionItem.className = 'transaction-item';
       
+      // CORREÇÃO 3: Corrigir exibição de valores positivos e negativos
       const isPositive = transaction.amount > 0;
       const amountClass = isPositive ? 'amount-positive' : 'amount-negative';
       const amountSign = isPositive ? '+' : '-';
@@ -603,9 +611,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Função para atualizar o dashboard
+  // CORREÇÃO 2: Função para atualizar o dashboard
   function updateDashboard() {
-    if (!totalBalance || !totalIncome || !totalExpenses || !categoryChart) return;
+    // Verificar se os elementos existem
+    if (!totalBalance || !totalIncome || !totalExpenses) {
+      console.log("Elementos do dashboard não encontrados");
+      return;
+    }
     
     // Calcular saldos
     let income = 0;
@@ -639,39 +651,130 @@ document.addEventListener('DOMContentLoaded', function() {
     totalExpenses.textContent = `R$ ${expenses.toFixed(2).replace('.', ',')}`;
     
     // Gerar gráfico de categorias
-    categoryChart.innerHTML = '';
-    
-    if (totalCategoryExpenses > 0) {
-      // Ordenar categorias por valor (decrescente)
-      const sortedCategories = Object.entries(categoryTotals)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5); // Mostrar apenas as 5 principais categorias
+    if (categoryChart) {
+      categoryChart.innerHTML = '';
       
-      sortedCategories.forEach(([category, amount]) => {
-        const percentage = Math.round((amount / totalCategoryExpenses) * 100);
-        const color = categoryColors[category] || categoryColors['💸 Outros'];
+      if (totalCategoryExpenses > 0) {
+        // Ordenar categorias por valor (decrescente)
+        const sortedCategories = Object.entries(categoryTotals)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5); // Mostrar apenas as 5 principais categorias
         
-        const chartBar = document.createElement('div');
-        chartBar.className = 'chart-bar';
-        chartBar.innerHTML = `
-          <div class="chart-bar-icon" style="background-color: ${color}">
-            ${category.split(' ')[0]}
-          </div>
-          <div class="chart-bar-content">
-            <div class="chart-bar-label">
-              <span class="chart-bar-name">${category.split(' ')[1] || 'Outros'}</span>
-              <span class="chart-bar-value">${percentage}%</span>
+        sortedCategories.forEach(([category, amount]) => {
+          const percentage = Math.round((amount / totalCategoryExpenses) * 100);
+          const color = categoryColors[category] || categoryColors['💸 Outros'];
+          
+          const chartBar = document.createElement('div');
+          chartBar.className = 'chart-bar';
+          chartBar.innerHTML = `
+            <div class="chart-bar-icon" style="background-color: ${color}">
+              ${category.split(' ')[0]}
             </div>
-            <div class="chart-bar-progress">
-              <div class="chart-bar-fill" style="width: ${percentage}%; background-color: ${color}"></div>
+            <div class="chart-bar-content">
+              <div class="chart-bar-label">
+                <span class="chart-bar-name">${category.split(' ')[1] || 'Outros'}</span>
+                <span class="chart-bar-value">${percentage}%</span>
+              </div>
+              <div class="chart-bar-progress">
+                <div class="chart-bar-fill" style="width: ${percentage}%; background-color: ${color}"></div>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+          
+          categoryChart.appendChild(chartBar);
+        });
+      } else {
+        categoryChart.innerHTML = '<p class="empty-state">Sem dados de despesas para exibir</p>';
+      }
+    }
+    
+    // ADIÇÃO 1: Mostrar transações mais recentes
+    if (recentTransactions) {
+      recentTransactions.innerHTML = '';
+      
+      if (transactions.length > 0) {
+        const recentItems = transactions.slice(0, 3); // Mostrar apenas as 3 mais recentes
         
-        categoryChart.appendChild(chartBar);
-      });
-    } else {
-      categoryChart.innerHTML = '<p class="empty-state">Sem dados de despesas para exibir</p>';
+        recentItems.forEach(transaction => {
+          const date = new Date(transaction.date);
+          const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+          
+          const isPositive = transaction.amount > 0;
+          const amountClass = isPositive ? 'amount-positive' : 'amount-negative';
+          const amountSign = isPositive ? '+' : '-';
+          const amountValue = Math.abs(transaction.amount).toFixed(2).replace('.', ',');
+          
+          const categoryColor = categoryColors[transaction.category] || categoryColors['💸 Outros'];
+          
+          const recentItem = document.createElement('div');
+          recentItem.className = 'recent-item';
+          recentItem.innerHTML = `
+            <div class="recent-icon" style="background-color: ${categoryColor}">
+              ${transaction.category.split(' ')[0]}
+            </div>
+            <div class="recent-details">
+              <div class="recent-name">${transaction.category.split(' ')[1] || 'Outros'}</div>
+              <div class="recent-date">${formattedDate}</div>
+            </div>
+            <div class="recent-amount ${amountClass}">${amountSign}R$ ${amountValue}</div>
+          `;
+          
+          recentTransactions.appendChild(recentItem);
+        });
+      } else {
+        recentTransactions.innerHTML = '<p class="empty-state">Nenhuma transação recente</p>';
+      }
+    }
+    
+    // ADIÇÃO 2: Mostrar transações mais frequentes
+    if (frequentTransactions) {
+      frequentTransactions.innerHTML = '';
+      
+      if (transactions.length > 0) {
+        // Contar ocorrências de cada categoria
+        const categoryCounts = {};
+        transactions.forEach(transaction => {
+          const category = transaction.category;
+          if (!categoryCounts[category]) {
+            categoryCounts[category] = {
+              count: 0,
+              totalAmount: 0,
+              isIncome: transaction.amount > 0
+            };
+          }
+          categoryCounts[category].count++;
+          categoryCounts[category].totalAmount += Math.abs(transaction.amount);
+        });
+        
+        // Ordenar categorias por frequência
+        const sortedFrequent = Object.entries(categoryCounts)
+          .sort((a, b) => b[1].count - a[1].count)
+          .slice(0, 3); // Mostrar apenas as 3 mais frequentes
+        
+        sortedFrequent.forEach(([category, data]) => {
+          const avgAmount = (data.totalAmount / data.count).toFixed(2).replace('.', ',');
+          const categoryColor = categoryColors[category] || categoryColors['💸 Outros'];
+          const amountClass = data.isIncome ? 'amount-positive' : 'amount-negative';
+          const amountSign = data.isIncome ? '+' : '-';
+          
+          const frequentItem = document.createElement('div');
+          frequentItem.className = 'frequent-item';
+          frequentItem.innerHTML = `
+            <div class="frequent-icon" style="background-color: ${categoryColor}">
+              ${category.split(' ')[0]}
+            </div>
+            <div class="frequent-details">
+              <div class="frequent-name">${category.split(' ')[1] || 'Outros'}</div>
+              <div class="frequent-count">${data.count}x</div>
+            </div>
+            <div class="frequent-amount ${amountClass}">Média: ${amountSign}R$ ${avgAmount}</div>
+          `;
+          
+          frequentTransactions.appendChild(frequentItem);
+        });
+      } else {
+        frequentTransactions.innerHTML = '<p class="empty-state">Sem dados suficientes</p>';
+      }
     }
   }
   
@@ -695,4 +798,3 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
-
