@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -26,9 +26,59 @@
     </div>
     
     <div class="tabs">
+      <button class="tab-btn" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn active" data-tab="voice">Voz</button>
       <button class="tab-btn" data-tab="manual">Manual</button>
       <button class="tab-btn" data-tab="history">Histórico</button>
+    </div>
+    
+    <!-- Aba de Dashboard -->
+    <div class="tab-content" id="dashboardTab">
+      <div class="dashboard-card">
+        <div class="balance-section">
+          <h3>Saldo Disponível</h3>
+          <div class="balance-amount" id="totalBalance">R$ 0,00</div>
+          <div class="balance-summary">
+            <div class="balance-item positive">
+              <span class="balance-label">Receitas</span>
+              <span class="balance-value" id="totalIncome">R$ 0,00</span>
+            </div>
+            <div class="balance-item negative">
+              <span class="balance-label">Despesas</span>
+              <span class="balance-value" id="totalExpenses">R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-section">
+          <h3>Gastos por Categoria</h3>
+          <div class="category-chart" id="categoryChart">
+            <!-- Gráfico de categorias será gerado pelo JavaScript -->
+          </div>
+        </div>
+        
+        <div class="quick-actions">
+          <h3>Ações Rápidas</h3>
+          <div class="action-buttons">
+            <button class="action-btn" id="scanBtn">
+              <span class="action-icon">📷</span>
+              <span class="action-text">Escanear Nota</span>
+            </button>
+            <button class="action-btn" id="voiceBtn">
+              <span class="action-icon">🎤</span>
+              <span class="action-text">Registrar por Voz</span>
+            </button>
+            <button class="action-btn" id="manualBtn">
+              <span class="action-icon">✏️</span>
+              <span class="action-text">Entrada Manual</span>
+            </button>
+            <button class="action-btn" id="historyBtn">
+              <span class="action-icon">📋</span>
+              <span class="action-text">Ver Histórico</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     
     <!-- Aba de Reconhecimento de Voz -->
@@ -61,6 +111,13 @@
       <div class="manual-input-card">
         <h3>Adicionar Transação</h3>
         <div class="input-group">
+          <label for="transactionType">Tipo</label>
+          <select id="transactionType">
+            <option value="expense">Despesa</option>
+            <option value="income">Receita</option>
+          </select>
+        </div>
+        <div class="input-group">
           <label for="transactionAmount">Valor (R$)</label>
           <input type="number" id="transactionAmount" placeholder="0,00" step="0.01">
         </div>
@@ -74,7 +131,8 @@
             <option value="🏠 Moradia">🏠 Moradia</option>
             <option value="💊 Saúde">💊 Saúde</option>
             <option value="👕 Vestuário">👕 Vestuário</option>
-            <option value="Outros">Outros</option>
+            <option value="💼 Salário">💼 Salário</option>
+            <option value="💸 Outros">💸 Outros</option>
           </select>
         </div>
         <div class="input-group">
@@ -93,6 +151,29 @@
           <p class="empty-state">Suas transações aparecerão aqui</p>
         </div>
         <button class="btn btn-secondary" id="clearTransactions">Limpar Histórico</button>
+      </div>
+    </div>
+    
+    <!-- Tela de Escaneamento de Nota Fiscal -->
+    <div class="scan-screen" id="scanScreen">
+      <div class="scan-header">
+        <button class="close-btn" id="closeScan">✕</button>
+        <h3>Escanear Nota Fiscal</h3>
+      </div>
+      <div class="scan-content">
+        <div class="scan-frame">
+          <div class="scan-corner top-left"></div>
+          <div class="scan-corner top-right"></div>
+          <div class="scan-corner bottom-left"></div>
+          <div class="scan-corner bottom-right"></div>
+        </div>
+        <p class="scan-instruction">Posicione a nota fiscal dentro do quadro</p>
+      </div>
+      <div class="scan-actions">
+        <button class="scan-btn" id="captureScan">
+          <span class="scan-icon">📷</span>
+          <span>Capturar</span>
+        </button>
       </div>
     </div>
     
@@ -128,3 +209,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
