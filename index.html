@@ -1,12 +1,12 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MeuBolso - Controle Financeiro</title>
   <meta name="description" content="Aplicativo de controle financeiro pessoal">
-  <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
@@ -31,6 +31,7 @@
       <button class="tab-btn" data-tab="history">Histórico</button>
     </div>
     
+    <!-- Aba de Reconhecimento de Voz -->
     <div class="tab-content active" id="voiceTab">
       <div class="voice-input-card">
         <div class="voice-icon-container">
@@ -55,6 +56,7 @@
       </div>
     </div>
     
+    <!-- Aba de Entrada Manual -->
     <div class="tab-content" id="manualTab">
       <div class="manual-input-card">
         <h3>Adicionar Transação</h3>
@@ -83,17 +85,20 @@
       </div>
     </div>
     
+    <!-- Aba de Histórico -->
     <div class="tab-content" id="historyTab">
       <div class="transactions-section">
         <h3>Transações Recentes</h3>
         <div id="transactionsList" class="transactions-list">
           <p class="empty-state">Suas transações aparecerão aqui</p>
         </div>
+        <button class="btn btn-secondary" id="clearTransactions">Limpar Histórico</button>
       </div>
     </div>
     
-    <div class="recognition-result" id="recognitionResult">
-      <div class="result-card hidden" id="resultCard">
+    <!-- Modal de Resultado do Reconhecimento -->
+    <div class="modal" id="recognitionResult">
+      <div class="modal-content">
         <div class="result-header">Transação reconhecida</div>
         <div class="result-content">
           <div class="result-item">
@@ -103,6 +108,9 @@
           <div class="result-item">
             <span class="result-label">Categoria:</span>
             <span class="result-value" id="recognizedCategory">-</span>
+          </div>
+          <div class="result-debug">
+            <small id="debugText" class="debug-text"></small>
           </div>
         </div>
         <div class="result-actions">
@@ -120,4 +128,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
