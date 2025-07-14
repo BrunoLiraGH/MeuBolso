@@ -1,26 +1,50 @@
 // MeuBolso - Script principal
 document.addEventListener('DOMContentLoaded', function() {
-  // Elementos DOM
+  // Elementos DOM - Geral
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  const browserWarning = document.getElementById('browserWarning');
+  const closeWarning = document.getElementById('closeWarning');
+  const permissionNotice = document.getElementById('permissionNotice');
+  const requestPermission = document.getElementById('requestPermission');
+  
+  // Elementos DOM - Dashboard
+  const totalBalance = document.getElementById('totalBalance');
+  const totalIncome = document.getElementById('totalIncome');
+  const totalExpenses = document.getElementById('totalExpenses');
+  const categoryChart = document.getElementById('categoryChart');
+  const scanBtn = document.getElementById('scanBtn');
+  const voiceBtn = document.getElementById('voiceBtn');
+  const manualBtn = document.getElementById('manualBtn');
+  const historyBtn = document.getElementById('historyBtn');
+  
+  // Elementos DOM - Reconhecimento de Voz
   const voiceButton = document.getElementById('voiceButton');
   const voiceStatus = document.getElementById('voiceStatus');
+  
+  // Elementos DOM - Entrada Manual
+  const transactionType = document.getElementById('transactionType');
+  const transactionAmount = document.getElementById('transactionAmount');
+  const transactionCategory = document.getElementById('transactionCategory');
+  const transactionDesc = document.getElementById('transactionDesc');
+  const addManualTransaction = document.getElementById('addManualTransaction');
+  
+  // Elementos DOM - Histórico
+  const transactionsList = document.getElementById('transactionsList');
+  const clearTransactions = document.getElementById('clearTransactions');
+  
+  // Elementos DOM - Escaneamento
+  const scanScreen = document.getElementById('scanScreen');
+  const closeScan = document.getElementById('closeScan');
+  const captureScan = document.getElementById('captureScan');
+  
+  // Elementos DOM - Modal de Resultado
   const recognitionModal = document.getElementById('recognitionResult');
   const recognizedValue = document.getElementById('recognizedValue');
   const recognizedCategory = document.getElementById('recognizedCategory');
   const confirmBtn = document.getElementById('confirmBtn');
   const retryBtn = document.getElementById('retryBtn');
   const debugText = document.getElementById('debugText');
-  const transactionsList = document.getElementById('transactionsList');
-  const browserWarning = document.getElementById('browserWarning');
-  const closeWarning = document.getElementById('closeWarning');
-  const permissionNotice = document.getElementById('permissionNotice');
-  const requestPermission = document.getElementById('requestPermission');
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
-  const addManualTransaction = document.getElementById('addManualTransaction');
-  const transactionAmount = document.getElementById('transactionAmount');
-  const transactionCategory = document.getElementById('transactionCategory');
-  const transactionDesc = document.getElementById('transactionDesc');
-  const clearTransactions = document.getElementById('clearTransactions');
   
   // Inicializar histórico de transações do localStorage
   let transactions = JSON.parse(localStorage.getItem('meuBolsoTransactions')) || [];
@@ -64,7 +88,10 @@ document.addEventListener('DOMContentLoaded', function() {
     'roupa': '👕 Vestuário',
     'roupas': '👕 Vestuário',
     'vestuário': '👕 Vestuário',
-    'vestuario': '👕 Vestuário'
+    'vestuario': '👕 Vestuário',
+    'salário': '💼 Salário',
+    'salario': '💼 Salário',
+    'pagamento': '💼 Salário'
   };
   
   // Cores das categorias
@@ -76,7 +103,8 @@ document.addEventListener('DOMContentLoaded', function() {
     '🏠 Moradia': '#009688',
     '💊 Saúde': '#F44336',
     '👕 Vestuário': '#3F51B5',
-    'Outros': '#607D8B'
+    '💼 Salário': '#4CAF50',
+    '💸 Outros': '#607D8B'
   };
   
   // Sistema de abas
@@ -89,8 +117,50 @@ document.addEventListener('DOMContentLoaded', function() {
       // Adicionar classe active à aba clicada
       button.classList.add('active');
       document.getElementById(`${button.dataset.tab}Tab`).classList.add('active');
+      
+      // Atualizar dashboard se for a aba selecionada
+      if (button.dataset.tab === 'dashboard') {
+        updateDashboard();
+      }
     });
   });
+  
+  // Botões de ação rápida no dashboard
+  if (scanBtn) {
+    scanBtn.addEventListener('click', () => {
+      openScanScreen();
+    });
+  }
+  
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', () => {
+      // Mudar para a aba de voz
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.querySelector('[data-tab="voice"]').classList.add('active');
+      document.getElementById('voiceTab').classList.add('active');
+    });
+  }
+  
+  if (manualBtn) {
+    manualBtn.addEventListener('click', () => {
+      // Mudar para a aba manual
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.querySelector('[data-tab="manual"]').classList.add('active');
+      document.getElementById('manualTab').classList.add('active');
+    });
+  }
+  
+  if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+      // Mudar para a aba de histórico
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.querySelector('[data-tab="history"]').classList.add('active');
+      document.getElementById('historyTab').classList.add('active');
+    });
+  }
   
   // Verificar se está em HTTPS (necessário para reconhecimento de voz em produção)
   const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -142,20 +212,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Verificar suporte a reconhecimento de voz
+  // Configurar reconhecimento de voz
   if (!SpeechRecognition || !isSecure) {
-    voiceStatus.textContent = "Reconhecimento de voz indisponível";
-    voiceButton.classList.add('disabled');
+    if (voiceStatus) {
+      voiceStatus.textContent = "Reconhecimento de voz indisponível";
+    }
+    if (voiceButton) {
+      voiceButton.classList.add('disabled');
+    }
     
     if (!isSecure) {
       console.log("O reconhecimento de voz requer uma conexão segura (HTTPS).");
     }
-    
-    // Mudar para a aba manual automaticamente
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    tabContents.forEach(content => content.classList.remove('active'));
-    document.querySelector('[data-tab="manual"]').classList.add('active');
-    document.getElementById('manualTab').classList.add('active');
   } else {
     // Configurar reconhecimento de voz
     try {
@@ -167,13 +235,15 @@ document.addEventListener('DOMContentLoaded', function() {
       let isListening = false;
       
       // Iniciar/parar reconhecimento
-      voiceButton.addEventListener('click', () => {
-        if (isListening) {
-          stopListening();
-        } else {
-          startListening();
-        }
-      });
+      if (voiceButton) {
+        voiceButton.addEventListener('click', () => {
+          if (isListening) {
+            stopListening();
+          } else {
+            startListening();
+          }
+        });
+      }
       
       function startListening() {
         try {
@@ -230,8 +300,12 @@ document.addEventListener('DOMContentLoaded', function() {
       // Tratamento de erros
       recognition.onerror = (event) => {
         console.error('Erro de reconhecimento:', event.error);
-        voiceButton.classList.remove('listening');
-        voiceStatus.textContent = 'Erro. Tente novamente';
+        if (voiceButton) {
+          voiceButton.classList.remove('listening');
+        }
+        if (voiceStatus) {
+          voiceStatus.textContent = 'Erro. Tente novamente';
+        }
         isListening = false;
         
         if (event.error === 'not-allowed') {
@@ -256,14 +330,12 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     } catch (error) {
       console.error('Erro ao configurar reconhecimento de voz:', error);
-      voiceStatus.textContent = "Reconhecimento de voz indisponível";
-      voiceButton.classList.add('disabled');
-      
-      // Mudar para a aba manual automaticamente
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
-      document.querySelector('[data-tab="manual"]').classList.add('active');
-      document.getElementById('manualTab').classList.add('active');
+      if (voiceStatus) {
+        voiceStatus.textContent = "Reconhecimento de voz indisponível";
+      }
+      if (voiceButton) {
+        voiceButton.classList.add('disabled');
+      }
     }
   }
   
@@ -272,8 +344,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const value = recognizedValue.textContent.replace('R$ ', '');
     const category = recognizedCategory.textContent;
     
-    // Criar nova transação
-    addTransaction(parseFloat(value.replace(',', '.')), category);
+    // Criar nova transação (valor negativo para despesas)
+    addTransaction(parseFloat('-' + value.replace(',', '.')), category);
     
     // Fechar modal
     recognitionModal.style.display = 'none';
@@ -306,13 +378,21 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Adicionar transação manual
   addManualTransaction.addEventListener('click', () => {
-    const amount = parseFloat(transactionAmount.value.replace(',', '.'));
+    let amount = parseFloat(transactionAmount.value.replace(',', '.'));
     const category = transactionCategory.value;
     const description = transactionDesc.value;
+    const type = transactionType.value;
     
     if (isNaN(amount) || amount === 0) {
       alert("Por favor, insira um valor válido.");
       return;
+    }
+    
+    // Se for despesa, transformar em valor negativo
+    if (type === 'expense') {
+      amount = -Math.abs(amount);
+    } else {
+      amount = Math.abs(amount);
     }
     
     // Adicionar transação
@@ -325,11 +405,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Feedback
     alert('Transação registrada com sucesso!');
     
-    // Mudar para a aba de histórico
+    // Mudar para a aba de dashboard
     tabButtons.forEach(btn => btn.classList.remove('active'));
     tabContents.forEach(content => content.classList.remove('active'));
-    document.querySelector('[data-tab="history"]').classList.add('active');
-    document.getElementById('historyTab').classList.add('active');
+    document.querySelector('[data-tab="dashboard"]').classList.add('active');
+    document.getElementById('dashboardTab').classList.add('active');
+    
+    // Atualizar dashboard
+    updateDashboard();
   });
   
   // Limpar histórico de transações
@@ -338,9 +421,44 @@ document.addEventListener('DOMContentLoaded', function() {
       transactions = [];
       localStorage.setItem('meuBolsoTransactions', JSON.stringify(transactions));
       updateTransactionsList();
+      updateDashboard();
       alert('Histórico limpo com sucesso!');
     }
   });
+  
+  // Controles da tela de escaneamento
+  if (scanBtn) {
+    scanBtn.addEventListener('click', openScanScreen);
+  }
+  
+  if (closeScan) {
+    closeScan.addEventListener('click', closeScanScreen);
+  }
+  
+  if (captureScan) {
+    captureScan.addEventListener('click', () => {
+      // Simulação de captura de nota fiscal
+      setTimeout(() => {
+        closeScanScreen();
+        
+        // Simular reconhecimento de uma nota fiscal
+        recognizedValue.textContent = 'R$ 156,30';
+        recognizedCategory.textContent = '🛒 Supermercado';
+        if (debugText) {
+          debugText.textContent = 'Nota fiscal escaneada: Supermercado Extra';
+        }
+        recognitionModal.style.display = 'flex';
+      }, 1000);
+    });
+  }
+  
+  function openScanScreen() {
+    scanScreen.style.display = 'flex';
+  }
+  
+  function closeScanScreen() {
+    scanScreen.style.display = 'none';
+  }
   
   // Função para adicionar transação
   function addTransaction(amount, category, description = '') {
@@ -366,6 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Atualizar a interface
     updateTransactionsList();
+    updateDashboard();
   }
   
   // Função para processar texto de entrada por voz
@@ -417,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Extrair categoria
-    let category = 'Outros';
+    let category = '💸 Outros';
     let missingCategory = true;
     let confidence = 0.5;
     
@@ -444,6 +563,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Função para atualizar a lista de transações
   function updateTransactionsList() {
+    if (!transactionsList) return;
+    
     if (transactions.length === 0) {
       transactionsList.innerHTML = '<p class="empty-state">Suas transações aparecerão aqui</p>';
       return;
@@ -463,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const amountSign = isPositive ? '+' : '-';
       const amountValue = Math.abs(transaction.amount).toFixed(2).replace('.', ',');
       
-      const categoryColor = categoryColors[transaction.category] || categoryColors['Outros'];
+      const categoryColor = categoryColors[transaction.category] || categoryColors['💸 Outros'];
       
       transactionItem.innerHTML = `
         <div class="transaction-info">
@@ -482,6 +603,96 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Inicializar a lista de transações
+  // Função para atualizar o dashboard
+  function updateDashboard() {
+    if (!totalBalance || !totalIncome || !totalExpenses || !categoryChart) return;
+    
+    // Calcular saldos
+    let income = 0;
+    let expenses = 0;
+    
+    // Contadores de categoria para despesas
+    const categoryTotals = {};
+    let totalCategoryExpenses = 0;
+    
+    transactions.forEach(transaction => {
+      if (transaction.amount > 0) {
+        income += transaction.amount;
+      } else {
+        expenses += Math.abs(transaction.amount);
+        
+        // Adicionar à categoria correspondente
+        const category = transaction.category;
+        if (!categoryTotals[category]) {
+          categoryTotals[category] = 0;
+        }
+        categoryTotals[category] += Math.abs(transaction.amount);
+        totalCategoryExpenses += Math.abs(transaction.amount);
+      }
+    });
+    
+    const balance = income - expenses;
+    
+    // Atualizar valores no dashboard
+    totalBalance.textContent = `R$ ${balance.toFixed(2).replace('.', ',')}`;
+    totalIncome.textContent = `R$ ${income.toFixed(2).replace('.', ',')}`;
+    totalExpenses.textContent = `R$ ${expenses.toFixed(2).replace('.', ',')}`;
+    
+    // Gerar gráfico de categorias
+    categoryChart.innerHTML = '';
+    
+    if (totalCategoryExpenses > 0) {
+      // Ordenar categorias por valor (decrescente)
+      const sortedCategories = Object.entries(categoryTotals)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5); // Mostrar apenas as 5 principais categorias
+      
+      sortedCategories.forEach(([category, amount]) => {
+        const percentage = Math.round((amount / totalCategoryExpenses) * 100);
+        const color = categoryColors[category] || categoryColors['💸 Outros'];
+        
+        const chartBar = document.createElement('div');
+        chartBar.className = 'chart-bar';
+        chartBar.innerHTML = `
+          <div class="chart-bar-icon" style="background-color: ${color}">
+            ${category.split(' ')[0]}
+          </div>
+          <div class="chart-bar-content">
+            <div class="chart-bar-label">
+              <span class="chart-bar-name">${category.split(' ')[1] || 'Outros'}</span>
+              <span class="chart-bar-value">${percentage}%</span>
+            </div>
+            <div class="chart-bar-progress">
+              <div class="chart-bar-fill" style="width: ${percentage}%; background-color: ${color}"></div>
+            </div>
+          </div>
+        `;
+        
+        categoryChart.appendChild(chartBar);
+      });
+    } else {
+      categoryChart.innerHTML = '<p class="empty-state">Sem dados de despesas para exibir</p>';
+    }
+  }
+  
+  // Inicializar a lista de transações e o dashboard
   updateTransactionsList();
+  updateDashboard();
+  
+  // Adicionar algumas transações de exemplo se não houver nenhuma
+  if (transactions.length === 0) {
+    // Adicionar transações de exemplo
+    const exampleTransactions = [
+      { amount: 3500.00, category: '💼 Salário', description: 'Salário mensal' },
+      { amount: -156.30, category: '🛒 Supermercado', description: 'Compras da semana' },
+      { amount: -45.90, category: '🍽️ Alimentação', description: 'Almoço' },
+      { amount: -100.00, category: '⛽ Transporte', description: 'Gasolina' },
+      { amount: -32.50, category: '💊 Saúde', description: 'Farmácia' }
+    ];
+    
+    exampleTransactions.forEach(transaction => {
+      addTransaction(transaction.amount, transaction.category, transaction.description);
+    });
+  }
 });
+
